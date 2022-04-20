@@ -10,12 +10,18 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationTokenSource
+import fastcampus.aop.part2.myfinedust.data.Repository
 import fastcampus.aop.part2.myfinedust.databinding.ActivityMainBinding
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private var cancellationTokenSource: CancellationTokenSource? = null
+
+    private val scope = MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +48,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
+    private fun fetchFineDustData() {
+        cancellationTokenSource = CancellationTokenSource()
+
+        fusedLocationProviderClient.getCurrentLocation(
+            LocationRequest.PRIORITY_HIGH_ACCURACY,
+            cancellationTokenSource!!.token
+        ).addOnSuccessListener { location ->
+            scope.launch {
+                val monitoringStation =
+                    Repository.getNearbyMonitoringStation(location.latitude, location.longitude)
+
+                binding.textView.text = monitoringStation?.stationName
+            }
+
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
@@ -52,21 +75,14 @@ class MainActivity : AppCompatActivity() {
         if (!locationPermissionGranted) {
             finish()
         } else {
-            cancellationTokenSource = CancellationTokenSource()
-
-            fusedLocationProviderClient.getCurrentLocation(
-                LocationRequest.PRIORITY_HIGH_ACCURACY,
-                cancellationTokenSource!!.token
-            ).addOnSuccessListener { location ->
-                binding.textView.text = "${location.latitude}, ${location.longitude}"
-
-            }
+            fetchFineDustData()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         cancellationTokenSource?.cancel()
+        scope.cancel()
     }
 
     companion object {
