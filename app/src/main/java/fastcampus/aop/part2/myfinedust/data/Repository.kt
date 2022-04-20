@@ -1,6 +1,7 @@
 package fastcampus.aop.part2.myfinedust.data
 
 import fastcampus.aop.part2.myfinedust.BuildConfig
+import fastcampus.aop.part2.myfinedust.data.models.airquality.MeasuredValue
 import fastcampus.aop.part2.myfinedust.data.models.monitoringstation.MonitoringStation
 import fastcampus.aop.part2.myfinedust.data.services.AirKoreaApiService
 import fastcampus.aop.part2.myfinedust.data.services.KakaoLocalApiService
@@ -30,6 +31,15 @@ object Repository {
             ?.monitoringStations
             ?.minByOrNull { it.tm ?: Double.MAX_VALUE }
     }
+
+    suspend fun getLatestAirQualityData(stationName: String): MeasuredValue? =
+        airKoreaApiService
+            .getRealtimeAirQualities(stationName)
+            .body()
+            ?.response
+            ?.body
+            ?.measuredValues
+            ?.firstOrNull()
 
     private val kakaoLocalApiService: KakaoLocalApiService by lazy {
         Retrofit.Builder()
