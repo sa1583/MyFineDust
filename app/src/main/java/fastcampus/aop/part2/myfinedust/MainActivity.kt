@@ -11,6 +11,9 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationTokenSource
 import fastcampus.aop.part2.myfinedust.data.Repository
+import fastcampus.aop.part2.myfinedust.data.models.airquality.Grade
+import fastcampus.aop.part2.myfinedust.data.models.airquality.MeasuredValue
+import fastcampus.aop.part2.myfinedust.data.models.monitoringstation.MonitoringStation
 import fastcampus.aop.part2.myfinedust.databinding.ActivityMainBinding
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -62,9 +65,55 @@ class MainActivity : AppCompatActivity() {
                 val measuredValue =
                     Repository.getLatestAirQualityData(monitoringStation!!.stationName!!)
 
-                binding.textView.text = measuredValue.toString()
+                displayAirQualityData(monitoringStation, measuredValue!!)
             }
 
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    fun displayAirQualityData(monitoringStation: MonitoringStation, measuredValue: MeasuredValue) {
+        binding.apply {
+            binding.measuringStationNameTextView.text = monitoringStation.stationName
+            binding.measuringStationAddressTextView.text = "측정소 위치: ${monitoringStation.addr}"
+
+            (measuredValue.khaiGrade ?: Grade.UNKOWN).let { grade ->
+                root.setBackgroundResource(grade.colorResId)
+                totalGradeLabelTextView.text = grade.label
+                totalGradleEmojiTextView.text = grade.emoji
+            }
+
+            with(measuredValue) {
+                findDustInfoTextView.text =
+                    "미세먼지: $pm10Value ㎍/㎥ ${(pm10Grade ?: Grade.UNKOWN).emoji}"
+                binding.ultraFindDustInfoTextView.text =
+                    "초미세먼지: $pm25Value ㎍/㎥ ${(pm25Grade ?: Grade.UNKOWN).emoji}"
+
+                with(binding.so2Item) {
+                    labelTextView.text = "아황산가스"
+                    gradeTextView.text = (so2Grade ?: Grade.UNKOWN).toString()
+                    valueTextView.text = "$so2Value ppm"
+                }
+
+                with(binding.coItem) {
+                    labelTextView.text = "일산화탄소"
+                    gradeTextView.text = (coGrade ?: Grade.UNKOWN).toString()
+                    valueTextView.text = "$coValue ppm"
+                }
+
+                with(binding.o3Item) {
+                    labelTextView.text = "오존"
+                    gradeTextView.text = (o3Grade ?: Grade.UNKOWN).toString()
+                    valueTextView.text = "$o3Value ppm"
+                }
+
+                with(binding.no2Item) {
+                    labelTextView.text = "이산화질소"
+                    gradeTextView.text = (no2Grade ?: Grade.UNKOWN).toString()
+                    valueTextView.text = "$no2Value ppm"
+                }
+
+            }
         }
     }
 
