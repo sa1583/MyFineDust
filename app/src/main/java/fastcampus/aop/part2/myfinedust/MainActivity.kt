@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -31,8 +32,15 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        bindViews()
         initVariables()
         requestLocationPermissions()
+    }
+
+    private fun bindViews() {
+        binding.refresh.setOnRefreshListener {
+            fetchFineDustData()
+        }
     }
 
     private fun initVariables() {
@@ -59,23 +67,35 @@ class MainActivity : AppCompatActivity() {
             cancellationTokenSource!!.token
         ).addOnSuccessListener { location ->
             scope.launch {
-                val monitoringStation =
-                    Repository.getNearbyMonitoringStation(location.latitude, location.longitude)
+                binding.errorDescriptionTextView.visibility = View.GONE
+                try {
+                    val monitoringStation =
+                        Repository.getNearbyMonitoringStation(location.latitude, location.longitude)
 
-                val measuredValue =
-                    Repository.getLatestAirQualityData(monitoringStation!!.stationName!!)
+                    val measuredValue =
+                        Repository.getLatestAirQualityData(monitoringStation!!.stationName!!)
 
-                displayAirQualityData(monitoringStation, measuredValue!!)
+                    displayAirQualityData(monitoringStation, measuredValue!!)
+                } catch (e: Exception) {
+                    binding.errorDescriptionTextView.visibility = View.VISIBLE
+                    binding.contentsLayout.alpha = 0F
+                } finally {
+                    binding.progressBar.visibility = View.GONE
+                    binding.refresh.isRefreshing = false
+                }
             }
 
         }
     }
 
     @SuppressLint("SetTextI18n")
-    fun displayAirQualityData(monitoringStation: MonitoringStation, measuredValue: MeasuredValue) {
+    private fun displayAirQualityData(monitoringStation: MonitoringStation, measuredValue: MeasuredValue) {
         binding.apply {
-            binding.measuringStationNameTextView.text = monitoringStation.stationName
-            binding.measuringStationAddressTextView.text = "측정소 위치: ${monitoringStation.addr}"
+            contentsLayout.animate()
+                .alpha(1F)
+                .start()
+            measuringStationNameTextView.text = monitoringStation.stationName
+            measuringStationAddressTextView.text = "측정소 위치: ${monitoringStation.addr}"
 
             (measuredValue.khaiGrade ?: Grade.UNKOWN).let { grade ->
                 root.setBackgroundResource(grade.colorResId)
